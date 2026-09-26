@@ -1,0 +1,12 @@
+import { getAppConfig } from "@/lib/app-config";
+import type { Metadata } from "next";
+import { RegisterForm } from "./register-form";
+
+export const metadata: Metadata = {
+  title: "Crear cuenta",
+};
+
+export default function RegisterPage() {
+  const { apiOriginUrl, wwwOriginUrl } = getAppConfig();
+  return <RegisterForm apiOriginUrl={apiOriginUrl} wwwOriginUrl={wwwOriginUrl} />;
+}
