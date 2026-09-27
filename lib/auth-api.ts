@@ -1,3 +1,5 @@
+import { toVisitorAuthMessage } from "@/lib/recaptcha";
+
 export interface AuthSession {
   readonly id: string;
   readonly email: string;
@@ -8,6 +10,7 @@ export interface AuthSession {
 export interface AuthCredentials {
   readonly email: string;
   readonly password: string;
+  readonly recaptchaToken: string;
 }
 
 export type LoginResult =
@@ -93,7 +96,7 @@ export async function login(
     });
     const session = readAuthSession(body);
     if (status === 200 && session) return { ok: true, session };
-    return { ok: false, message: readErrorMessage(body) ?? REQUEST_FAILED_MESSAGE };
+    return { ok: false, message: toVisitorAuthMessage(readErrorMessage(body), REQUEST_FAILED_MESSAGE) };
   } catch {
     return { ok: false, message: SERVER_UNREACHABLE_MESSAGE };
   }
@@ -110,7 +113,7 @@ export async function register(
       body: JSON.stringify(credentials),
     });
     if (status === 201) return { ok: true };
-    return { ok: false, message: readErrorMessage(body) ?? REQUEST_FAILED_MESSAGE };
+    return { ok: false, message: toVisitorAuthMessage(readErrorMessage(body), REQUEST_FAILED_MESSAGE) };
   } catch {
     return { ok: false, message: SERVER_UNREACHABLE_MESSAGE };
   }

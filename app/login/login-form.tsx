@@ -1,16 +1,19 @@
 "use client";
 
+import { RecaptchaScript } from "@/app/recaptcha-script";
 import { login } from "@/lib/auth-api";
 import { setCsrfToken } from "@/lib/csrf-token";
+import { CAPTCHA_VISITOR_MESSAGE, executeRecaptcha } from "@/lib/recaptcha";
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
 
 interface LoginFormProps {
   readonly apiOriginUrl: string;
   readonly wwwOriginUrl: string;
+  readonly recaptchaSiteKey: string;
 }
 
-export function LoginForm({ apiOriginUrl, wwwOriginUrl }: LoginFormProps) {
+export function LoginForm({ apiOriginUrl, wwwOriginUrl, recaptchaSiteKey }: LoginFormProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -21,7 +24,13 @@ export function LoginForm({ apiOriginUrl, wwwOriginUrl }: LoginFormProps) {
     const password = String(formData.get("password") ?? "");
     setErrorMessage(null);
     setIsSubmitting(true);
-    const result = await login(apiOriginUrl, { email, password });
+    const recaptchaToken = await executeRecaptcha(recaptchaSiteKey, "login");
+    if (!recaptchaToken) {
+      setErrorMessage(CAPTCHA_VISITOR_MESSAGE);
+      setIsSubmitting(false);
+      return;
+    }
+    const result = await login(apiOriginUrl, { email, password, recaptchaToken });
     if (!result.ok) {
       setErrorMessage(result.message);
       setIsSubmitting(false);
@@ -33,6 +42,7 @@ export function LoginForm({ apiOriginUrl, wwwOriginUrl }: LoginFormProps) {
 
   return (
     <main>
+      <RecaptchaScript siteKey={recaptchaSiteKey} />
       <h1>Iniciar sesión</h1>
       <form onSubmit={handleLogin}>
         <div>

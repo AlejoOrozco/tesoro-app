@@ -78,7 +78,9 @@ The cookie lasts 7 days. In production its domain is `.tesoroglobalsas.com`, so 
 
 ### `POST /auth/register`
 
-Body: `{ "email": "...", "password": "..." }`
+Body: `{ "email": "...", "password": "...", "recaptchaToken": "..." }`
+
+`recaptchaToken` comes from reCAPTCHA v3 on the app, action `register`. See the reCAPTCHA section.
 
 Password rule, shown on the form: at least 8 characters, one uppercase letter, one lowercase letter, one digit, one symbol.
 
@@ -92,7 +94,7 @@ No cookie is set. Sign in after this.
 
 | Status | `message` |
 |---|---|
-| 400 | `Email must be a valid email address` or `Password must be at least 8 characters and include an uppercase letter, a lowercase letter, a digit, and a symbol` |
+| 400 | `Email must be a valid email address`, the password rule, `Captcha token is required`, or `Captcha verification failed` |
 | 409 | `Email already registered` |
 | 429 | `Too Many Requests` |
 | 503 | `Service unavailable` |
@@ -101,9 +103,9 @@ Five attempts per IP per minute. A **400** whose message is `Registration could 
 
 ### `POST /auth/login`
 
-Body: `{ "email": "...", "password": "..." }`
+Body: `{ "email": "...", "password": "...", "recaptchaToken": "..." }`
 
-The login password is not checked against the register rule. Empty is rejected. Longer than 200 characters is rejected.
+`recaptchaToken` uses action `login`. The login password is not checked against the register rule. Empty is rejected. Longer than 200 characters is rejected.
 
 **200**
 
@@ -120,7 +122,7 @@ The login password is not checked against the register rule. Empty is rejected. 
 
 | Status | `message` |
 |---|---|
-| 400 | `Email must be a valid email address` or `Password is required` |
+| 400 | `Email must be a valid email address`, `Password is required`, `Captcha token is required`, or `Captcha verification failed` |
 | 401 | `Invalid email or password` |
 | 403 | `Email address is not confirmed` |
 | 429 | `Too Many Requests` |
@@ -161,11 +163,29 @@ headers: {
 
 On **403**, call `GET /auth/me` once, store the new `csrfToken`, and retry logout once. If that also fails, go to `/login`.
 
-## reCAPTCHA
+## reCAPTCHA (app only)
 
-Do not send a reCAPTCHA field. The API does not accept one. `forbidNonWhitelisted` turns an extra property into **400**, and login or register will fail.
+www does not load reCAPTCHA. `GET /auth/me` and later product reads stay without a token. Only app `/login` and `/register` get a token, and only those two API routes require it.
 
-reCAPTCHA v3 is the next API change, on register and login only. The site key will be public in the frontend. The secret stays on the API. Wire the widget when that field exists, not before.
+On the app Vercel project, set `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` to the site key. Do not put that key on www. The secret `RECAPTCHA_SECRET_KEY` stays on the API (local `.env` and Railway). In the Google admin console, allow `localhost` and `app.tesoroglobalsas.com`.
+
+Load the script on the app only:
+
+```html
+<script src="https://www.google.com/recaptcha/api.js?render=SITE_KEY"></script>
+```
+
+Before submit, and not earlier:
+
+```ts
+const token = await grecaptcha.execute(siteKey, { action: 'login' });
+```
+
+Use action `register` on the register form and `login` on the login form. Those strings must match exactly. Send the token as `recaptchaToken` in the JSON body, together with `credentials: 'include'`.
+
+A fresh token is required for every submit. Do not store it.
+
+When `message` is `Captcha verification failed` or `Captcha token is required`, show `No pudimos verificar que eres una persona. Intenta de nuevo.` The account is not created and no session is set.
 
 ## Check that the three hosts agree
 

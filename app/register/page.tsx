@@ -1,4 +1,4 @@
-import { getAppConfig } from "@/lib/app-config";
+import { getAppConfig, getRecaptchaSiteKey } from "@/lib/app-config";
 import type { Metadata } from "next";
 import { RegisterForm } from "./register-form";
 
@@ -8,5 +8,11 @@ export const metadata: Metadata = {
 
 export default function RegisterPage() {
   const { apiOriginUrl, wwwOriginUrl } = getAppConfig();
-  return <RegisterForm apiOriginUrl={apiOriginUrl} wwwOriginUrl={wwwOriginUrl} />;
+  return (
+    <RegisterForm
+      apiOriginUrl={apiOriginUrl}
+      wwwOriginUrl={wwwOriginUrl}
+      recaptchaSiteKey={getRecaptchaSiteKey()}
+    />
+  );
 }

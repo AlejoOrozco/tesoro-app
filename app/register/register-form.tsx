@@ -1,6 +1,8 @@
 "use client";
 
+import { RecaptchaScript } from "@/app/recaptcha-script";
 import { register } from "@/lib/auth-api";
+import { CAPTCHA_VISITOR_MESSAGE, executeRecaptcha } from "@/lib/recaptcha";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
@@ -8,9 +10,14 @@ import { type FormEvent, useState } from "react";
 interface RegisterFormProps {
   readonly apiOriginUrl: string;
   readonly wwwOriginUrl: string;
+  readonly recaptchaSiteKey: string;
 }
 
-export function RegisterForm({ apiOriginUrl, wwwOriginUrl }: RegisterFormProps) {
+export function RegisterForm({
+  apiOriginUrl,
+  wwwOriginUrl,
+  recaptchaSiteKey,
+}: RegisterFormProps) {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -22,7 +29,13 @@ export function RegisterForm({ apiOriginUrl, wwwOriginUrl }: RegisterFormProps) 
     const password = String(formData.get("password") ?? "");
     setErrorMessage(null);
     setIsSubmitting(true);
-    const result = await register(apiOriginUrl, { email, password });
+    const recaptchaToken = await executeRecaptcha(recaptchaSiteKey, "register");
+    if (!recaptchaToken) {
+      setErrorMessage(CAPTCHA_VISITOR_MESSAGE);
+      setIsSubmitting(false);
+      return;
+    }
+    const result = await register(apiOriginUrl, { email, password, recaptchaToken });
     if (!result.ok) {
       setErrorMessage(result.message);
       setIsSubmitting(false);
@@ -33,6 +46,7 @@ export function RegisterForm({ apiOriginUrl, wwwOriginUrl }: RegisterFormProps) 
 
   return (
     <main>
+      <RecaptchaScript siteKey={recaptchaSiteKey} />
       <h1>Crear cuenta</h1>
       <form onSubmit={handleRegister}>
         <div>
