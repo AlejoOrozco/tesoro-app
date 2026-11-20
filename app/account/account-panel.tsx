@@ -1,8 +1,11 @@
 "use client";
 
+import { AuthCard } from "@/app/auth-card";
 import { getMe, type AuthSession } from "@/lib/auth-api";
 import { setCsrfToken } from "@/lib/csrf-token";
+import { isAdministrator } from "@/lib/roles";
 import { signOut } from "@/lib/sign-out";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -52,28 +55,38 @@ export function AccountPanel({ apiOriginUrl, wwwOriginUrl }: AccountPanelProps) 
 
   if (isLoading) {
     return (
-      <main>
-        <p>Cargando…</p>
+      <main className="auth-screen">
+        <section className="card" aria-busy="true" aria-label="Cargando">
+          <div className="skeleton title" />
+          <div className="skeleton line" />
+          <div className="skeleton line" />
+        </section>
       </main>
     );
   }
 
   return (
-    <main>
-      <h1>Cuenta</h1>
-      {errorMessage ? <p role="alert">{errorMessage}</p> : null}
-      {session ? (
-        <>
-          <p>Correo electrónico: {session.email}</p>
-          <p>Rol: {session.role}</p>
-          <button type="button" onClick={() => void handleSignOut()} disabled={isSigningOut}>
-            Cerrar sesión
-          </button>
-        </>
-      ) : null}
-      <p>
-        <a href={wwwOriginUrl}>Volver al sitio</a>
-      </p>
-    </main>
+    <AuthCard
+      title="Cuenta"
+      wwwOriginUrl={wwwOriginUrl}
+      footer={
+        session && isAdministrator(session.role) ? <Link href="/admin">Ir al panel</Link> : null
+      }
+    >
+      <div className="stack">
+        {errorMessage ? <p className="alert" role="alert">{errorMessage}</p> : null}
+        {session ? (
+          <>
+            <p>Correo electrónico: {session.email}</p>
+            <p>Rol: {session.role}</p>
+            <Link href="/cart">Carrito</Link>
+            <Link href="/orders">Pedidos</Link>
+            <button type="button" className="secondary" onClick={() => void handleSignOut()} disabled={isSigningOut} aria-busy={isSigningOut}>
+              {isSigningOut ? "Cerrando…" : "Cerrar sesión"}
+            </button>
+          </>
+        ) : null}
+      </div>
+    </AuthCard>
   );
 }
